@@ -81,7 +81,10 @@ open_files = function(cwd, label)
     file_icons = true,
     fd_opts = fd_file_opts(),
     actions = {
-      ["ctrl-r"] = guard(function() open_grep(cwd, label) end),
+      ["default"] = require("fzf-lua").actions.file_edit,
+      ["ctrl-r"] = guard(function()
+        open_grep(cwd, label)
+      end),
       ["alt-r"] = guard(pick_dir),
     },
   })
@@ -94,10 +97,12 @@ open_grep = function(cwd, label)
     cwd_prompt = true,
     git_icons = true,
     file_icons = true,
-    rg_opts = "--column --line-number --no-heading --color=always --smart-case -g '!.git' "
-      .. rg_extra_opts(),
+    rg_opts = "--column --line-number --no-heading --color=always --smart-case -g '!.git' " .. rg_extra_opts(),
     actions = {
-      ["ctrl-r"] = guard(function() open_files(cwd, label) end),
+      ["default"] = require("fzf-lua").actions.file_edit,
+      ["ctrl-r"] = guard(function()
+        open_files(cwd, label)
+      end),
       ["alt-r"] = guard(pick_dir),
     },
   })
@@ -149,16 +154,26 @@ pick_dir = function()
   local cmd = string.format(
     [[{ fd --type d --hidden --exclude .git . %s 2>/dev/null | sed "s#^%s#~#"; ]]
       .. [[fd --type d --hidden --exclude .git . %s 2>/dev/null | sed "s#^%s#\$PREFIX#"; }]],
-    vim.fn.shellescape(roots.HOME), roots.HOME,
-    vim.fn.shellescape(roots.PREFIX), roots.PREFIX
+    vim.fn.shellescape(roots.HOME),
+    roots.HOME,
+    vim.fn.shellescape(roots.PREFIX),
+    roots.PREFIX
   )
 
   require("fzf-lua").fzf_exec(cmd, {
     prompt = "Dir> ",
     actions = {
-      ["default"] = function(selected)
-        local full = expand_label(selected[1])
-        open_files(full, "Files (" .. selected[1] .. ")> ")
+      ["default"] = function(selected, opts)
+        local actions = require("fzf-lua").actions
+        local path = require("fzf-lua.path")
+        for i, entry in ipairs(selected) do
+          local file = path.entry_to_file(entry, opts).path
+          if i == 1 then
+            vim.cmd("edit " .. vim.fn.fnameescape(file))
+          else
+            vim.cmd("vsplit " .. vim.fn.fnameescape(file))
+          end
+        end
       end,
     },
   })
