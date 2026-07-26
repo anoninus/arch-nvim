@@ -8,14 +8,16 @@
 --   <leader>sc  Session Create -> new session, fails if name already exists
 --   <leader>sd  Session Delete -> persistent fzf multi-delete (ctrl-x)
 --
--- Autosave: whenever a buffer/split/tab JOINS the session (BufAdd,
--- WinNew, TabNew — creation events only, never plain navigation),
--- PuSessionUnsaved flips true and a save is scheduled for the next
--- event-loop tick via vim.schedule. A `pending` boolean collapses a
--- burst of joins (opening several files at once, or the joins fired
--- by loading a session itself) into a single mksession call. No
--- timer, no delay, no snapshot diffing — BufAdd/WinNew/TabNew only
--- ever fire on genuine creation, so every fire is already "new".
+-- Autosave: whenever the buffer/split/tab layout CHANGES — a buffer,
+-- split, or tab is added (BufAdd/WinNew/TabNew) or removed
+-- (BufDelete/WinClosed/TabClosed) — PuSessionUnsaved flips true and a
+-- save is scheduled for the next event-loop tick via vim.schedule. A
+-- `pending` boolean collapses a burst of changes (opening several
+-- files at once, the joins fired by loading a session itself, or
+-- closing several splits back to back) into a single mksession call.
+-- No timer, no delay, no snapshot diffing — these are structural
+-- events only, never plain navigation, so every fire is a genuine
+-- layout change.
 --
 -- No zombies: LSP clients and terminal jobs are stopped both when
 -- switching sessions and on VimLeavePre, so quitting nvim directly
@@ -57,9 +59,11 @@ _G.PuSessionSnapshot = nil
 --     that may not exist/match next time you load it.
 --   - NO "blank"/"terminal" -> no empty scratch buffers or dead
 --     terminal jobs get "restored" as stale placeholders.
---   - buffers,tabpages,winsize,winpos,folds -> full layout (splits,
---     tabs, fold state) is captured and restored exactly.
-vim.o.sessionoptions = "buffers,tabpages,winsize,winpos,folds,localoptions,globals,help"
+--   - buffers,tabpages,winsize,winpos -> full layout (splits, tabs,
+--     window sizes/positions) is captured and restored exactly.
+--   - NO "folds" -> fold state isn't reliably restored anyway, so it's
+--     dropped rather than carrying dead weight in the session file.
+vim.o.sessionoptions = "buffers,tabpages,winsize,winpos,localoptions,globals,help"
 
 local function ensure_dir()
   if vim.fn.isdirectory(M.session_dir) == 0 then
@@ -92,7 +96,7 @@ end
 -- and on VimLeavePre (so quitting nvim directly never leaves zombies).
 local function kill_zombies()
   for _, client in ipairs(vim.lsp.get_clients()) do
-    client.stop(true) -- force stop, don't wait for graceful shutdown
+    client:stop(true) -- force stop, don't wait for graceful shutdown
   end
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
@@ -153,10 +157,10 @@ local function flush_save()
   _G.PuSessionUnsaved = false
 end
 
--- Invoked from BufAdd/WinNew/TabNew only — creation events, never
--- plain navigation (bufnext/bufprev/tabnext/tabprev, <C-w>w, etc.).
--- No-ops if no session is currently loaded.
-local function on_join()
+-- Invoked from the structural add/remove events only — never plain
+-- navigation (bufnext/bufprev/tabnext/tabprev, <C-w>w, etc.). No-ops
+-- if no session is currently loaded.
+local function on_change()
   if not M.current_session then
     return
   end
@@ -278,17 +282,26 @@ function M.session_delete()
 end
 
 -- ---------------------------------------------------------------------
--- Autocmds: ONLY creation-type events. BufAdd fires when a buffer is
--- newly added to the buffer list (e.g. :edit a new file) — never when
--- switching to an already-listed buffer (that's BufEnter, deliberately
--- not hooked). WinNew fires on splits/vsplits, never on <C-w>w focus
--- changes. TabNew fires on new tabs, never on tabnext/tabprev.
+-- Autocmds: structural add/remove events only, never plain navigation.
+--   BufAdd     -> buffer newly added to the buffer list (:edit a new
+--                 file). Never fires when switching to an already-
+--                 listed buffer (that's BufEnter, deliberately unhooked).
+--   BufDelete  -> buffer removed from the buffer list (:bdelete,
+--                 closing the last window showing it via :q, etc).
+--   WinNew     -> a split/vsplit is created. Never fires on <C-w>w
+--                 focus changes.
+--   WinClosed  -> a split/vsplit is closed.
+--   TabNew     -> a new tab is created. Never fires on tabnext/tabprev.
+--   TabClosed  -> a tab is closed.
 -- ---------------------------------------------------------------------
 local aug = vim.api.nvim_create_augroup("PuSessionTracking", { clear = true })
 
-vim.api.nvim_create_autocmd("BufAdd", { group = aug, callback = on_join })
-vim.api.nvim_create_autocmd("WinNew", { group = aug, callback = on_join })
-vim.api.nvim_create_autocmd("TabNew", { group = aug, callback = on_join })
+vim.api.nvim_create_autocmd("BufAdd", { group = aug, callback = on_change })
+vim.api.nvim_create_autocmd("BufDelete", { group = aug, callback = on_change })
+vim.api.nvim_create_autocmd("WinNew", { group = aug, callback = on_change })
+vim.api.nvim_create_autocmd("WinClosed", { group = aug, callback = on_change })
+vim.api.nvim_create_autocmd("TabNew", { group = aug, callback = on_change })
+vim.api.nvim_create_autocmd("TabClosed", { group = aug, callback = on_change })
 
 -- Final safety net: flush any save still pending, then kill LSP
 -- clients / terminal jobs so quitting never leaves zombie processes,
