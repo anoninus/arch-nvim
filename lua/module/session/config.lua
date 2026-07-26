@@ -10,14 +10,14 @@
 --
 -- Autosave: whenever the buffer/split/tab layout CHANGES — a buffer,
 -- split, or tab is added (BufAdd/WinNew/TabNew) or removed
--- (BufDelete/WinClosed/TabClosed) — PuSessionUnsaved flips true and a
--- save is scheduled for the next event-loop tick via vim.schedule. A
--- `pending` boolean collapses a burst of changes (opening several
--- files at once, the joins fired by loading a session itself, or
--- closing several splits back to back) into a single mksession call.
--- No timer, no delay, no snapshot diffing — these are structural
--- events only, never plain navigation, so every fire is a genuine
--- layout change.
+-- (BufDelete/WinClosed/TabClosed) — the session is saved immediately,
+-- synchronously, inline in the autocmd callback. mksession! is cheap
+-- (just writes a small vimscript file), so there's no need to defer
+-- or debounce it — and deferring via vim.schedule/vim.defer_fn means
+-- waiting for the next main-loop tick, which in practice doesn't
+-- happen until further input arrives (e.g. a cursor move), so a
+-- closed split wouldn't actually be saved until you moved the cursor.
+-- Saving inline avoids that entirely.
 --
 -- No zombies: LSP clients and terminal jobs are stopped both when
 -- switching sessions and on VimLeavePre, so quitting nvim directly
@@ -123,7 +123,7 @@ local function reset_editor_state()
 end
 
 -- Call this right after a successful create/load/save: marks the
--- session as loaded, records its name, clears the unsaved/pending flag.
+-- session as loaded, records its name, clears the unsaved flag.
 local function mark_loaded(name)
   M.current_session = name
   _G.PuSessionLoaded = name
@@ -141,15 +141,11 @@ local function mark_unloaded()
 end
 
 -- ---------------------------------------------------------------------
--- Autosave: a buffer/split/tab joining the session schedules a save on
--- the next tick. `pending` collapses simultaneous joins into a single
--- mksession call instead of one per file/split/tab.
+-- Autosave: a buffer/split/tab joining or leaving the session saves
+-- immediately, synchronously.
 -- ---------------------------------------------------------------------
 
-local pending = false
-
-local function flush_save()
-  pending = false
+local function save_session()
   if not M.current_session then
     return
   end
@@ -165,11 +161,7 @@ local function on_change()
     return
   end
   _G.PuSessionUnsaved = true
-  if pending then
-    return
-  end
-  pending = true
-  vim.schedule(flush_save)
+  save_session()
 end
 
 --- Returns the loaded session's name (truthy string) if a session is
@@ -178,8 +170,9 @@ function M.is_session_loaded()
   return _G.PuSessionLoaded
 end
 
---- Returns true if a save is currently pending (scheduled but hasn't
---- landed on disk yet).
+--- Returns true only transiently — saves are synchronous now, so this
+--- is effectively always false except for the instant inside a save.
+--- Kept for API compatibility with anything reading it (e.g. statusline).
 function M.is_unsaved()
   return _G.PuSessionUnsaved
 end
@@ -303,17 +296,12 @@ vim.api.nvim_create_autocmd("WinClosed", { group = aug, callback = on_change })
 vim.api.nvim_create_autocmd("TabNew", { group = aug, callback = on_change })
 vim.api.nvim_create_autocmd("TabClosed", { group = aug, callback = on_change })
 
--- Final safety net: flush any save still pending, then kill LSP
--- clients / terminal jobs so quitting never leaves zombie processes,
--- whether or not a session happens to be loaded.
+-- Final safety net: kill LSP clients / terminal jobs on quit so
+-- nothing outlives nvim. Saves no longer need flushing here since
+-- every change is already saved synchronously the moment it happens.
 vim.api.nvim_create_autocmd("VimLeavePre", {
   group = aug,
-  callback = function()
-    if pending then
-      flush_save()
-    end
-    kill_zombies()
-  end,
+  callback = kill_zombies,
 })
 
 -- Keymaps
