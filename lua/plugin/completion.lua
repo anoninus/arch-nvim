@@ -8,8 +8,6 @@ return {
     event = { "InsertEnter", "CmdlineEnter" },
     version = "1.*",
 
-    ---@module 'blink.cmp'
-    ---@type blink.cmp.Config
     opts = {
       appearance = {
         nerd_font_variant = "mono",
