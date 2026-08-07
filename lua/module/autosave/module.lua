@@ -322,11 +322,6 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("AutosaveToggleFormat", M.toggle_format, {})
   vim.api.nvim_create_user_command("AutosaveToggleNotify", M.toggle_notify, {})
 
-  -- Setup keybindings
-  vim.keymap.set("n", "U", M.toggle, {
-    desc = "Toggle Autosave",
-    silent = true,
-  })
 end
 
 return M
