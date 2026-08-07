@@ -222,6 +222,14 @@ function M.session_find()
           vim.notify("Session file missing: " .. path, vim.log.levels.ERROR)
           return
         end
+        -- Detach autosave BEFORE tearing anything down, so the
+        -- BufDelete/WinClosed/TabClosed events fired by
+        -- reset_editor_state(), and the BufAdd/WinNew/TabNew events
+        -- fired by sourcing the new session below, don't trigger
+        -- on_change() -> save_session() against the OLD session's
+        -- name (which would clobber the old session's file on disk
+        -- with a half-torn-down or half-loaded layout).
+        mark_unloaded()
         reset_editor_state()
         vim.cmd("silent! source " .. vim.fn.fnameescape(path))
         mark_loaded(name)
