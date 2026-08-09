@@ -20,9 +20,6 @@ end
 -- ============================
 -- Perf: shared fast opts for big/unknown trees
 -- ============================
--- Disabling git_icons/file_icons avoids extra `git status` + devicon
--- lookups per entry. The --exclude list keeps fd from descending into
--- huge dirs (node_modules, caches, venvs) that make $HOME/$PREFIX slow.
 local FAST_EXCLUDES = {
   "--exclude .git",
   "--exclude node_modules",
@@ -34,21 +31,20 @@ local FAST_EXCLUDES = {
   "--exclude .cargo",
 }
 
-local function fd_file_opts()
-  return "--color=never --type f --hidden " .. table.concat(FAST_EXCLUDES, " ")
-end
+local FD_FILE_OPTS = "--color=never --type f --hidden " .. table.concat(FAST_EXCLUDES, " ")
 
-local function rg_extra_opts()
+local RG_EXTRA_OPTS = (function()
   local parts = {}
   for _, e in ipairs(FAST_EXCLUDES) do
-    -- convert "--exclude X" -> "--glob !X" for ripgrep
     local dir = e:match("^%-%-exclude%s+(.+)$")
     if dir then
       table.insert(parts, string.format("--glob '!%s'", dir))
     end
   end
   return table.concat(parts, " ")
-end
+end)()
+
+local RG_OPTS = "--column --line-number --no-heading --color=always --smart-case -g '!.git' " .. RG_EXTRA_OPTS
 
 -- ============================
 -- files/grep opener with ctrl-r toggle + alt-r dir-picker
@@ -64,7 +60,9 @@ local function guard(fn)
     switching = true
     local args = { ... }
     vim.schedule(function()
-      fn(unpack(args))
+      -- table.unpack replaces the Lua 5.1/LuaJIT global `unpack`,
+      -- which is deprecated/absent in Lua 5.4.
+      fn(table.unpack(args))
       vim.defer_fn(function()
         switching = false
       end, 150)
@@ -79,7 +77,7 @@ open_files = function(cwd, label)
     cwd_prompt = true,
     git_icons = true,
     file_icons = true,
-    fd_opts = fd_file_opts(),
+    fd_opts = FD_FILE_OPTS,
     actions = {
       ["default"] = require("fzf-lua").actions.file_edit,
       ["ctrl-r"] = guard(function()
@@ -97,7 +95,7 @@ open_grep = function(cwd, label)
     cwd_prompt = true,
     git_icons = true,
     file_icons = true,
-    rg_opts = "--column --line-number --no-heading --color=always --smart-case -g '!.git' " .. rg_extra_opts(),
+    rg_opts = RG_OPTS,
     actions = {
       ["default"] = require("fzf-lua").actions.file_edit,
       ["ctrl-r"] = guard(function()
@@ -109,25 +107,76 @@ open_grep = function(cwd, label)
 end
 
 -- ============================
--- Keymaps
+-- Keymaps (raw, no <leader> — user relies on leap.nvim)
 -- ============================
 local map = vim.keymap.set
 
-map("n", "<leader>fd", function()
+map("n", "fd", function()
   open_files(vim.fn.getcwd(), "Cwd/")
 end, { desc = "Files: cwd" })
-map("n", "<leader>fr", function()
+map("n", "fr", function()
   open_files(root(), "Root_Dir/")
 end, { desc = "Files: project root" })
-map("n", "<leader>fh", function()
+map("n", "fh", function()
   open_files(home(), "~/")
 end, { desc = "Files: $HOME" })
-map("n", "<leader>fp", function()
+map("n", "fp", function()
   open_files(prefix(), "$PREFIX/")
 end, { desc = "Files: $PREFIX" })
-map("n", "<leader>fc", function()
+map("n", "fc", function()
   open_files(config(), "Purc/")
 end, { desc = "Files: nvim config" })
+
+-- ============================
+-- Toggleable buffer diagnostics (split)
+-- ============================
+local function find_fzf_win()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "fzf" then
+      return win, buf
+    end
+  end
+  return nil, nil
+end
+
+local function toggle_diagnostics_split()
+  local _, buf = find_fzf_win()
+
+  if buf then
+    -- Leave terminal-mode first, otherwise nvim_buf_delete can fail
+    -- or leave the cursor/job in a weird state.
+    if vim.fn.mode() == "t" then
+      vim.cmd("stopinsert")
+    end
+    vim.api.nvim_buf_delete(buf, { force = true })
+    return
+  end
+
+  require("fzf-lua").diagnostics_document({
+    winopts = {
+      -- split = "belowright new",
+      -- preview = { hidden = true },
+      -- height = 0.35,
+    },
+    diag_icons = true, -- show severity icons
+    diag_source = true, -- show source, e.g. [lua_ls]
+    diag_code = true, -- show diag code, e.g. [undefined-global]
+    multiline = 2, -- wrap heading + message onto separate lines
+    color_headings = true, -- color file/severity headings
+    icon_padding = " ", -- breathing room next to icons
+    fzf_opts = {
+      ["--color"] = "fg+:regular,hl+:regular",
+    },
+    actions = {
+      ["esc"] = false, -- disable default close-on-esc
+    },
+  })
+end
+
+-- Mapped in BOTH normal mode (to open) and terminal mode (to close
+-- while focused inside the fzf picker itself).
+vim.keymap.set({ "n", "t" }, "<S-End>", toggle_diagnostics_split, { desc = "Toggle buffer diagnostics (split)" })
 
 -- ============================
 -- Custom dir picker (fzf_exec — no fzf-lua pre-processing overhead)
@@ -137,16 +186,6 @@ local function termux_roots()
     HOME = os.getenv("HOME") or "/data/data/com.termux/files/home",
     PREFIX = os.getenv("PREFIX") or "/data/data/com.termux/files/usr",
   }
-end
-
-local function expand_label(label)
-  local roots = termux_roots()
-  if label:sub(1, 1) == "~" then
-    return roots.HOME .. label:sub(2)
-  elseif label:sub(1, 8) == "$PREFIX/" or label == "$PREFIX" then
-    return roots.PREFIX .. label:sub(8)
-  end
-  return label
 end
 
 pick_dir = function()
@@ -164,14 +203,18 @@ pick_dir = function()
     prompt = "Dir> ",
     actions = {
       ["default"] = function(selected, opts)
-        local actions = require("fzf-lua").actions
         local path = require("fzf-lua.path")
         for i, entry in ipairs(selected) do
           local file = path.entry_to_file(entry, opts).path
-          if i == 1 then
-            vim.cmd("edit " .. vim.fn.fnameescape(file))
-          else
-            vim.cmd("vsplit " .. vim.fn.fnameescape(file))
+          -- `.path` is typed as `string?`; fnameescape/edit/vsplit all
+          -- require a plain `string`, so skip any entry that resolves
+          -- to nil instead of passing it through unchecked.
+          if file then
+            if i == 1 then
+              vim.cmd("edit " .. vim.fn.fnameescape(file))
+            else
+              vim.cmd("vsplit " .. vim.fn.fnameescape(file))
+            end
           end
         end
       end,
@@ -179,4 +222,4 @@ pick_dir = function()
   })
 end
 
-map("n", "<leader>ff", pick_dir, { desc = "Files: pick custom dir ($HOME/$PREFIX)" })
+map("n", "ff", pick_dir, { desc = "Files: pick custom dir ($HOME/$PREFIX)" })
