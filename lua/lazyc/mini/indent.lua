@@ -1,7 +1,7 @@
 local function setup_ibl()
   require("ibl").setup({
     indent = {
-      char = "│",
+      char = "¦",
     },
     scope = {
       enabled = false,
@@ -25,7 +25,7 @@ end
 
 local function setup_indentscope()
   require("mini.indentscope").setup({
-    symbol = "│",
+    symbol = "¦",
     options = {
       try_as_border = true,
     },
@@ -36,7 +36,7 @@ local function setup_indentscope()
   })
 
   -- Link the line color to NonText
-  vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", { link = "NonText" })
+  -- vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", { link = "NonText" })
 end
 
 
