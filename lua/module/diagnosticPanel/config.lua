@@ -389,7 +389,7 @@ function M.setup(opts)
     end,
   })
 
-  vim.keymap.set("n", opts.keymap or "<S-End>", function()
+  vim.keymap.set({"n", "i"}, opts.keymap or "<S-End>", function()
     if is_open() then
       close()
     else
