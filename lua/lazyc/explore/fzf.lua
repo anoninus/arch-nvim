@@ -3,6 +3,7 @@
 -- ============================
 local function setup_fzf()
   require("fzf-lua").setup({
+    file_icon_padding = " ",
     winopts = {
       height = 0.85,
       width = 0.80,
