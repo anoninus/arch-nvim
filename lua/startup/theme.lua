@@ -40,7 +40,7 @@ require("tokyonight").setup({
 
     hl.FzfLuaNormal = { bg = "#222436", fg = "#c8d3f5" }
     hl.FzfLuaFzfNormal = {bg = "#222436"}
-    hl.FzfLuaFzfCursorLine = {bg = "#3b3c40"}
+    hl.FzfLuaFzfCursorLine = {bg = "#2f334d"}
     hl.FzfLuaBorder = { fg = "#65bcff", bg = "#222436", bold = true }
     hl.FzfLuaTitle = { fg = "#222436", bg = "#65bcff", bold = true }
     hl.FzfLuaPreviewNormal = { bg = "#222436", fg = "#c8d3f5" }
