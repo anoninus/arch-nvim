@@ -60,9 +60,9 @@ local function guard(fn)
     switching = true
     local args = { ... }
     vim.schedule(function()
-      -- table.unpack replaces the Lua 5.1/LuaJIT global `unpack`,
-      -- which is deprecated/absent in Lua 5.4.
-      fn(table.unpack(args))
+      -- keep it as `unpack(args)`
+      -- `table.unpack(args)` will fail.
+      fn(unpack(args))
       vim.defer_fn(function()
         switching = false
       end, 150)
