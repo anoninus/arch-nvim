@@ -127,56 +127,11 @@ map("n", "fc", function()
   open_files(config(), "Purc/")
 end, { desc = "Files: nvim config" })
 
--- ============================
--- Toggleable buffer diagnostics (split)
--- ============================
-local function find_fzf_win()
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local buf = vim.api.nvim_win_get_buf(win)
-    if vim.bo[buf].filetype == "fzf" then
-      return win, buf
-    end
-  end
-  return nil, nil
+
+local function fzf_buffer_diagnostics()
+  require("fzf-lua").diagnostics_document({})
 end
-
-local function toggle_diagnostics_split()
-  local _, buf = find_fzf_win()
-
-  if buf then
-    -- Leave terminal-mode first, otherwise nvim_buf_delete can fail
-    -- or leave the cursor/job in a weird state.
-    if vim.fn.mode() == "t" then
-      vim.cmd("stopinsert")
-    end
-    vim.api.nvim_buf_delete(buf, { force = true })
-    return
-  end
-
-  require("fzf-lua").diagnostics_document({
-    winopts = {
-      -- split = "belowright new",
-      -- preview = { hidden = true },
-      -- height = 0.35,
-    },
-    diag_icons = true, -- show severity icons
-    diag_source = true, -- show source, e.g. [lua_ls]
-    diag_code = true, -- show diag code, e.g. [undefined-global]
-    multiline = 2, -- wrap heading + message onto separate lines
-    color_headings = true, -- color file/severity headings
-    icon_padding = " ", -- breathing room next to icons
-    fzf_opts = {
-      ["--color"] = "fg+:regular,hl+:regular",
-    },
-    actions = {
-      ["esc"] = false, -- disable default close-on-esc
-    },
-  })
-end
-
--- Mapped in BOTH normal mode (to open) and terminal mode (to close
--- while focused inside the fzf picker itself).
-vim.keymap.set({ "n", "t" }, "<S-End>", toggle_diagnostics_split, { desc = "Toggle buffer diagnostics (split)" })
+vim.keymap.set({ "n", "i" }, "<S-End>", fzf_buffer_diagnostics, { desc = "Toggle buffer diagnostics (split)" })
 
 -- ============================
 -- Custom dir picker (fzf_exec — no fzf-lua pre-processing overhead)
