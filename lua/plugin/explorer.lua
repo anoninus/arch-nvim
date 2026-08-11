@@ -50,30 +50,26 @@ return {
     end,
   },
   {
-    "NeogitOrg/neogit",
+    "kdheepak/lazygit.nvim",
     lazy = true,
-    cmd = "Neogit",
+    cmd = {
+      "LazyGit",
+      "LazyGitConfig",
+      "LazyGitCurrentFile",
+      "LazyGitFilter",
+      "LazyGitFilterCurrentFile",
+    },
     dependencies = {
       "nvim-lua/plenary.nvim",
     },
     keys = {
-      {
-        "gg",
-        function()
-          require("neogit").open({ cwd = vim.fn.expand("%:p:h") })
-        end,
-        desc = "Open Neogit (current file's dir)",
-      },
+      { "gg", "<cmd>LazyGitCurrentFile<cr>", desc = "Open Repo of current file" },
     },
     config = function()
-      require("neogit").setup({
-        graph_style = "unicode",
-        disable_commit_confirmation = false,
-        integrations = {
-          diffview = true, -- set false if you don't install diffview.nvim
-          telescope = true, -- set false if you don't install telescope
-        },
-      })
+      vim.g.lazygit_floating_window_winblend = 0
+      vim.g.lazygit_floating_window_scaling_factor = 1
+      vim.g.lazygit_floating_window_border_chars = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
+      vim.g.lazygit_use_neovim_remote = 0 -- fallback to 0 if neovim-remote not installed
     end,
   },
 }
