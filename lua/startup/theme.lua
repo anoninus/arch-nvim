@@ -20,7 +20,7 @@ require("tokyonight").setup({
     hl.FloatShadow = { bg = "#222436" }
     hl.FloatTitle = { bg = "#65bcff", fg = "#000000" }
     hl.FloatFooter = { bg = "#65bcff", fg = "#000000" }
-    hl.Comment = { fg = "#809ab0", italic = false }
+    hl.Comment = { fg = "#a9b1d6", italic = false }
     hl.LineNr = { fg = "#6b7a8e" }
     hl.LineNrAbove = { fg = "#6b7a8e" }
     hl.LineNrBelow = { fg = "#6b7a8e" }
