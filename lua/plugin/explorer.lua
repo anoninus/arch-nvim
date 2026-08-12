@@ -3,8 +3,28 @@
 -- ===========================
 return {
   {
-    "stevearc/oil.nvim",
+    "mikavilpas/yazi.nvim",
+    version = "*",
     lazy = true,
+    dependencies = {
+      { "nvim-lua/plenary.nvim", lazy = true },
+    },
+    keys = {
+      { ",", mode = { "n", "v" }, "<cmd>Yazi<cr>", desc = "Open yazi at current file" },
+    },
+    opts = {
+      yazi_floating_window_border = "none", -- see border types below
+      yazi_floating_window_winblend = 0, -- 0-100 transparency
+      floating_window_scaling_factor = 1, -- window size %
+      yazi_floating_window_zindex = 100,
+      highlight_groups = {
+        hovered_buffer = nil, -- customize hover highlight
+        hovered_buffer_in_same_directory = nil,
+      },
+    },
+    init = function()
+      vim.g.loaded_netrwPlugin = 1
+    end,
   },
   {
     "ibhagwan/fzf-lua",
