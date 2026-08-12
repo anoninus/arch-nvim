@@ -83,7 +83,7 @@ return {
       "nvim-lua/plenary.nvim",
     },
     keys = {
-      { "gg", "<cmd>LazyGitCurrentFile<cr>", desc = "Open Repo of current file" },
+      { "gl", "<cmd>LazyGitCurrentFile<cr>", desc = "Open Repo of current file" },
     },
     config = function()
       vim.g.lazygit_floating_window_winblend = 0
