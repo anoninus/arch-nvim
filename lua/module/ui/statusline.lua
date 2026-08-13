@@ -1,120 +1,162 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- TokyoNight Moon statusline — "pure" style
--- Flat, minimal, high-contrast: colored text segments on a single dark
--- background, separated by a thin muted divider. No powerline blocks/
--- arrows — this reads cleanly against any background/colorscheme.
+-- Adaptive "pure" statusline — flat, minimal, high-contrast text segments
+-- on a single background, separated by a thin muted divider. No powerline
+-- blocks/arrows.
+--
+-- Unlike a hardcoded palette, every color here is *resolved* from the
+-- active colorscheme's own highlight groups (DiagnosticError, Function,
+-- String, Comment, StatusLine, ...) at colorscheme-load time. Swap themes
+-- and the statusline re-tints itself automatically — no palette to keep
+-- in sync, and it always matches whatever theme is loaded.
 -- ═══════════════════════════════════════════════════════════════════════
-
--- Explicit TokyoNight "Moon" palette — hardcoded so segment colors stay
--- distinct and readable regardless of what the active colorscheme links
--- resolve to.
-local moon = {
-  bg = "#1e2030", -- slightly darker than editor bg: a subtle, flat bar
-  fg = "#c8d3f5",
-  fg_dark = "#828bb8",
-  comment = "#3b4261", -- dim divider color
-  red = "#ff757f",
-  orange = "#ff966c",
-  yellow = "#ffc777",
-  green = "#c3e88d",
-  teal = "#4fd6be",
-  cyan = "#86e1fc",
-  blue = "#82aaff",
-  blue1 = "#65bcff",
-  magenta = "#c099ff",
-  purple = "#fca7ea",
-}
 
 -- Nerd font glyphs
 local icons = {
-  lsp = "Lsp 󱁤",               -- Code braces / LSP
-  error = "󰅚",             -- Error circle
-  warn = "󰀪",              -- Warning triangle
-  hint = "󰌵",              -- Lightbulb
-  info = "󰋼",              -- Information
-  macro = "󰘳",             -- Keyboard/macro
-  search = "󰍉",
-  session_saved = " 󰄬",     -- Check all
-  session_unsaved = " 󰆓",   -- Save edit
-  cursor = "󰆾",            -- Cursor
-  divider = "",            -- Thin divider
+  lsp = "Lsp 󱁤",
+  error = "󰅚",
+  warn = "󰀪",
+  hint = "󰌵",
+  info = "󰋼",
+  macro = "󰘳",
+  search = "",
+  session_saved = " 󰄬",
+  session_unsaved = " 󰆓",
+  cursor = "",
+  divider = "/",
 }
 
--- Per-mode display: label + accent color + icon. Keys are vim.fn.mode().
+-- ── Color resolution ─────────────────────────────────────────────────
+-- Read `attr` ("fg"/"bg") off highlight group `name`, following links.
+-- Returns a "#rrggbb" string, or nil if the group has no such attr.
+local function hl_attr(name, attr)
+  local ok, h = pcall(vim.api.nvim_get_hl, 0, { name = name, link = false })
+  if ok and h and h[attr] then
+    return string.format("#%06x", h[attr])
+  end
+  return nil
+end
+
+-- Try a prioritized list of highlight groups, return the first hit.
+local function resolve(attr, group_names)
+  for _, name in ipairs(group_names) do
+    local c = hl_attr(name, attr)
+    if c then
+      return c
+    end
+  end
+  return nil
+end
+
+-- Which real highlight groups back each semantic color. These are
+-- standard groups every colorscheme defines (or links), so this works
+-- across themes without ever naming a literal hex value.
+local fg_groups = {
+  base = { "StatusLine", "Normal" },
+  dim = { "Comment", "NonText" },
+  divider = { "Comment", "NonText" },
+  lsp = { "Function", "Identifier" },
+  macro = { "DiagnosticError", "ErrorMsg", "Error" },
+  error = { "DiagnosticError", "ErrorMsg", "Error" },
+  warn = { "DiagnosticWarn", "WarningMsg" },
+  hint = { "DiagnosticHint" },
+  info = { "DiagnosticInfo", "Special" },
+  search = { "Constant", "Special" },
+  session_saved = { "String", "DiagnosticOk" },
+  session_unsaved = { "DiagnosticWarn", "WarningMsg" },
+
+  mode_normal = { "Function", "Identifier" },
+  mode_insert = { "String" },
+  mode_visual = { "Statement", "Keyword" },
+  mode_select = { "Constant" },
+  mode_replace = { "DiagnosticError", "ErrorMsg", "Error" },
+  mode_command = { "PreProc", "Type" },
+  mode_prompt = { "DiagnosticHint" },
+  mode_shellterm = { "Special" },
+}
+
+local bg_groups = { "StatusLine", "Normal" }
+
+-- Per-mode display: label + semantic color key + icon. Keys are vim.fn.mode().
 local mode_map = {
-  ["n"] = { "NORMAL", moon.blue, "" },
-  ["no"] = { "O-PENDING", moon.blue, "" },
-  ["nov"] = { "O-PENDING", moon.blue, "" },
-  ["noV"] = { "O-PENDING", moon.blue, "" },
-  ["no\22"] = { "O-PENDING", moon.blue, "" },
-  ["niI"] = { "NORMAL", moon.blue, "" },
-  ["niR"] = { "NORMAL", moon.blue, "" },
-  ["niV"] = { "NORMAL", moon.blue, "" },
-  ["v"] = { "VISUAL", moon.magenta, "" },
-  ["vs"] = { "VISUAL", moon.magenta, "" },
-  ["V"] = { "V-LINE", moon.magenta, "" },
-  ["Vs"] = { "V-LINE", moon.magenta, "" },
-  ["\22"] = { "V-BLOCK", moon.purple, "" },
-  ["\22s"] = { "V-BLOCK", moon.purple, "" },
-  ["s"] = { "SELECT", moon.orange, "" },
-  ["S"] = { "S-LINE", moon.orange, "" },
-  ["\19"] = { "S-BLOCK", moon.orange, "" },
-  ["i"] = { "INSERT", moon.green, "" },
-  ["ic"] = { "INSERT", moon.green, "" },
-  ["ix"] = { "INSERT", moon.green, "" },
-  ["R"] = { "REPLACE", moon.red, "" },
-  ["Rc"] = { "REPLACE", moon.red, "" },
-  ["Rx"] = { "REPLACE", moon.red, "" },
-  ["Rv"] = { "V-REPLACE", moon.red, "" },
-  ["Rvc"] = { "V-REPLACE", moon.red, "" },
-  ["Rvx"] = { "V-REPLACE", moon.red, "" },
-  ["c"] = { "COMMAND", moon.yellow, "" },
-  ["cv"] = { "EX", moon.yellow, "" },
-  ["ce"] = { "EX", moon.yellow, "" },
-  ["r"] = { "PROMPT", moon.teal, "" },
-  ["rm"] = { "MORE", moon.teal, "" },
-  ["r?"] = { "CONFIRM", moon.teal, "" },
-  ["!"] = { "SHELL", moon.cyan, "" },
-  ["t"] = { "TERMINAL", moon.cyan, "" },
+  ["n"] = { "NORMAL", "mode_normal", "" },
+  ["no"] = { "O-PENDING", "mode_normal", "" },
+  ["nov"] = { "O-PENDING", "mode_normal", "" },
+  ["noV"] = { "O-PENDING", "mode_normal", "" },
+  ["no\22"] = { "O-PENDING", "mode_normal", "" },
+  ["niI"] = { "NORMAL", "mode_normal", "" },
+  ["niR"] = { "NORMAL", "mode_normal", "" },
+  ["niV"] = { "NORMAL", "mode_normal", "" },
+  ["v"] = { "VISUAL", "mode_visual", "" },
+  ["vs"] = { "VISUAL", "mode_visual", "" },
+  ["V"] = { "V-LINE", "mode_visual", "" },
+  ["Vs"] = { "V-LINE", "mode_visual", "" },
+  ["\22"] = { "V-BLOCK", "mode_visual", "" },
+  ["\22s"] = { "V-BLOCK", "mode_visual", "" },
+  ["s"] = { "SELECT", "mode_select", "" },
+  ["S"] = { "S-LINE", "mode_select", "" },
+  ["\19"] = { "S-BLOCK", "mode_select", "" },
+  ["i"] = { "INSERT", "mode_insert", "" },
+  ["ic"] = { "INSERT", "mode_insert", "" },
+  ["ix"] = { "INSERT", "mode_insert", "" },
+  ["R"] = { "REPLACE", "mode_replace", "" },
+  ["Rc"] = { "REPLACE", "mode_replace", "" },
+  ["Rx"] = { "REPLACE", "mode_replace", "" },
+  ["Rv"] = { "V-REPLACE", "mode_replace", "" },
+  ["Rvc"] = { "V-REPLACE", "mode_replace", "" },
+  ["Rvx"] = { "V-REPLACE", "mode_replace", "" },
+  ["c"] = { "COMMAND", "mode_command", "" },
+  ["cv"] = { "EX", "mode_command", "" },
+  ["ce"] = { "EX", "mode_command", "" },
+  ["r"] = { "PROMPT", "mode_prompt", "" },
+  ["rm"] = { "MORE", "mode_prompt", "" },
+  ["r?"] = { "CONFIRM", "mode_prompt", "" },
+  ["!"] = { "SHELL", "mode_shellterm", "" },
+  ["t"] = { "TERMINAL", "mode_shellterm", "" },
 }
 
--- Flat, fixed-color segments: just bold colored text on the base bg —
--- no pill/background block, so it stays legible in low-contrast themes.
-
+-- Flat, fixed-color segments: bold colored text on the base bg — no
+-- pill/background block, so it stays legible against any theme.
 local seg_defs = {
-  { key = "lsp", name = "Lsp", color = moon.blue1 },
-  { key = "macro", name = "Macro", color = moon.red },
-  { key = "error", name = "Error", color = moon.red },
-  { key = "warn", name = "Warn", color = moon.yellow },
-  { key = "hint", name = "Hint", color = moon.teal },
-  { key = "info", name = "Info", color = moon.cyan },
-  { key = "search", name = "Search", color = moon.purple },  -- NEW
-  { key = "session_saved", name = "SessionSaved", color = moon.green },
-  { key = "session_unsaved", name = "SessionUnsaved", color = moon.orange },
+  { key = "lsp", name = "Lsp" },
+  { key = "macro", name = "Macro" },
+  { key = "error", name = "Error" },
+  { key = "warn", name = "Warn" },
+  { key = "hint", name = "Hint" },
+  { key = "info", name = "Info" },
+  { key = "search", name = "Search" },
+  { key = "session_saved", name = "SessionSaved" },
+  { key = "session_unsaved", name = "SessionUnsaved" },
 }
 
 -- Populated by set_statusline_colors(): key -> ready "%#Group#" string.
 local seg_hl = {}
 
--- Define statusline highlight groups using the fixed Moon palette.
+-- (Re)define statusline highlight groups by resolving colors from the
+-- currently active colorscheme. Runs once at load and again on every
+-- ColorScheme event, so switching themes re-tints the bar automatically.
 local function set_statusline_colors()
-  local bg = moon.bg
+  local bg = resolve("bg", bg_groups)
+  local fg = resolve("fg", fg_groups.base)
+  local fg_dark = resolve("fg", fg_groups.dim)
+  local divider_fg = resolve("fg", fg_groups.divider)
 
-  vim.api.nvim_set_hl(0, "SLBase", { fg = moon.fg, bg = bg })
-  vim.api.nvim_set_hl(0, "SLDefault", { fg = moon.fg_dark, bg = bg })
-  vim.api.nvim_set_hl(0, "SLDivider", { fg = moon.comment, bg = bg })
+  vim.api.nvim_set_hl(0, "SLBase", { fg = fg, bg = bg })
+  vim.api.nvim_set_hl(0, "SLDefault", { fg = fg_dark, bg = bg })
+  vim.api.nvim_set_hl(0, "SLDivider", { fg = divider_fg, bg = bg })
   -- Rightmost item: no bg block at all — inherits the statusline bg.
-  vim.api.nvim_set_hl(0, "SLCursor", { fg = moon.fg, bold = true })
+  vim.api.nvim_set_hl(0, "SLCursor", { fg = fg, bold = true })
 
   for _, def in ipairs(seg_defs) do
-    local name = "SL" .. def.name
-    vim.api.nvim_set_hl(0, name, { fg = def.color, bg = bg, bold = true })
-    seg_hl[def.key] = "%#" .. name .. "#"
+    local hl_name = "SL" .. def.name
+    local color = resolve("fg", fg_groups[def.key])
+    vim.api.nvim_set_hl(0, hl_name, { fg = color, bg = bg, bold = true })
+    seg_hl[def.key] = "%#" .. hl_name .. "#"
   end
 
   -- Mode: bold colored text, no background block — just a bright label.
   for _, entry in pairs(mode_map) do
-    local label, color = entry[1], entry[2]
+    local label, color_key = entry[1], entry[2]
+    local color = resolve("fg", fg_groups[color_key])
     local hl_name = "SLMode" .. label:gsub("[^%a]", "")
     vim.api.nvim_set_hl(0, hl_name, { fg = color, bg = bg, bold = true })
   end
@@ -124,7 +166,6 @@ end
 local function seg(key, content)
   return seg_hl[key] .. content .. "%#SLDefault#"
 end
-
 
 -- Thin, muted divider placed between visible segments.
 local function divider()
@@ -140,7 +181,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 -- Current mode, rendered as plain bold colored text (no block).
 _G.get_mode = function()
   local m = vim.fn.mode()
-  local entry = mode_map[m] or { "UNKNOWN", moon.fg_dark, "" }
+  local entry = mode_map[m] or { "UNKNOWN", "dim", "" }
   local label, _, icon = entry[1], entry[2], entry[3]
   local hl_name = "%#SLMode" .. label:gsub("[^%a]", "") .. "#"
 
@@ -162,9 +203,8 @@ _G.get_lsp_count = function()
 end
 
 -- Redraw the statusline whenever LSP clients attach/detach, since
--- there's no more per-second timer driving redraws — the count in
--- get_lsp_count() would otherwise go stale until some other redraw
--- happened to fire.
+-- there's no per-second timer driving redraws — the count in
+-- get_lsp_count() would otherwise go stale until some other redraw fired.
 local lsp_grp = vim.api.nvim_create_augroup("StatuslineLspRefresh", { clear = true })
 vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
   group = lsp_grp,
@@ -236,7 +276,7 @@ _G.get_session = function()
   local key = unsaved and "session_unsaved" or "session_saved"
   local icon = unsaved and icons.session_unsaved or icons.session_saved
 
-  return seg(key, "Session: " ..  name .. icon .. " ")
+  return seg(key, "Session: " .. name .. icon .. " ")
 end
 
 -- Current search match count (e.g. 3/12), only shown while hlsearch
@@ -278,23 +318,13 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
   end,
 })
 
--- Keep the count fresh as you jump between matches with n/N.
-vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-  group = search_grp,
-  callback = function()
-    if vim.v.hlsearch == 1 then
-      vim.cmd("redrawstatus")
-    end
-  end,
-})
-
 -- Build the full statusline string
 _G.build_statusline = function()
   local mode = _G.get_mode()
   local macro = _G.get_macro_recording()
   local lsp = seg("lsp", icons.lsp .. " " .. _G.get_lsp_count())
   local diag = _G.get_diagnostics()
-  local search = _G.get_search()      -- NEW
+  local search = _G.get_search()
   local session = _G.get_session()
   local cursor = "%#SLCursor#" .. icons.cursor .. " %l:%c"
 
@@ -306,7 +336,7 @@ _G.build_statusline = function()
   if diag ~= "" then
     table.insert(left, diag)
   end
-  if search ~= "" then                -- NEW
+  if search ~= "" then
     table.insert(left, search)
   end
   if session ~= "" then
@@ -319,3 +349,4 @@ _G.build_statusline = function()
 end
 
 vim.o.statusline = "%!v:lua.build_statusline()"
+
