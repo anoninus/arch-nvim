@@ -1,0 +1,5 @@
+[preview]
+wrap = "yes"
+
+[mgr]
+ratio = [0, 1, 0]

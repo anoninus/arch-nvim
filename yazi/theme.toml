@@ -1,0 +1,8 @@
+[flavor]
+dark = "catppuccin-mocha"
+light = "catppuccin-latte"
+
+[indicator]
+parent  = { fg = "lightmagenta", reversed = true }
+current = { fg = "lightblue", reversed = true }  
+preview = { fg = "lightred", bold = true, underline = true}
