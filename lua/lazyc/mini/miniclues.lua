@@ -32,6 +32,7 @@ local function setup_miniclues()
 
       -- Built-in useful triggers
       { mode = "n", keys = "g" },
+      { mode = "n", keys = "f" },
       { mode = "x", keys = "g" },
       { mode = "n", keys = "[" },
       { mode = "n", keys = "]" },
