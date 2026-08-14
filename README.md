@@ -26,9 +26,9 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 | 7 | File manager | [yazi.nvim](https://github.com/mikavilpas/yazi.nvim), triggered with `,` |
 | 8 | Sessions | `<Space>s` + key |
 | 9 | System clipboard | Yank to system, paste from system |
-| 10 | Tabline | Built in |
+| 10 | Tabline | PrePacked [mini.tabline](https://github.com/nvim-mini/mini.tabline)|
 | 11 | Statusline | Prebuilt and useful out of the box |
-| 12 | Self-contained modules | No unnecessary downloads |
+| 12 | Self-contained modules | Take a look at `~/.config/nvim/lua/module/` -- No unnecessary downloads |
 | 13 | Continuous updates | Actively maintained |
 | 14 | Prebaked LSPs | No Mason, no binary installs — Neovim manages the LSPs directly (see below) |
 | 15 | Fast startup | Smart lazy-loading via [lazy.nvim](https://github.com/folke/lazy.nvim), loads after `VimEnter`. Uses 50–90% less disk space than a typical plugin setup |
@@ -83,7 +83,7 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 ### Prebaked LSPs
 
 > [!Important]
-> Check docs about adding new server : [Servers]()
+> Check docs about adding new server : [Servers](docs/ServerSetup.md)
 
 ```lua
 lua        = "server.HighLevel.lua_ls",
@@ -124,7 +124,7 @@ git clone --depth 1 git@gitlab.com:pudep/nvim.git ~/.config/nvim
 
 ## Documentation
 
-> 📌 **Note:** [GUIDE.md]() is meant for new maintainers  and those who will modify the `config`.
+> 📌 **Note:** [GUIDE.md](docs/GUIDE.md) is meant for new maintainers  and those who will modify the `config`.
 
-- Keymaps: [KEYS.md]()
-- Project guide: [GUIDE.md]()
+- Keymaps: [KEYS.md](docs/KEYS.md)
+- Project guide: [GUIDE.md](docs/GUIDE.md)
