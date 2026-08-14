@@ -65,7 +65,6 @@ end
 
 for _, mode in ipairs({ "n", "i", "t" }) do
   vim.keymap.set(mode, "<C-t>", with_escape(mode, listed_toggle), { desc = "Toggle listed terminal", silent = true })
-  vim.keymap.set("t", "<M-q>", "<C-\\><C-n>:q<CR>", { desc = "Exit terminal and close buffer" })
 end
 
 -- Leave the buffer on bufprev/bufnext
