@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20WSL-lightgrey)
 
-## About
+## 📕 About
 
 > [!Important]
 > Though the project is matured and updates very soon, I still need your help.
@@ -13,7 +13,7 @@
 
 This config aims to give you a full IDE-like experience in Neovim, without the bloat.
 
-## Features
+## 🎉 Features
 
 | # | Feature | Details |
 |---|---------|---------|
@@ -52,7 +52,7 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 | 33 | Rust tooling | [crates.nvim](https://github.com/saecki/crates.nvim) |
 | 34 | Auto-close tags | [nvim-ts-autotag](https://github.com/windwp/nvim-ts-autotag) for HTML/JSX/TSX |
 
-## Plugins
+## 🔌 Plugins
 
 21 plugins total, kept lean through lazy-loading.
 
@@ -80,7 +80,7 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 | [vim-visual-multi](https://github.com/mg979/vim-visual-multi) | `<C-n>`, `<C-Up>`, `<C-Down>` (normal & visual) |
 | [yazi.nvim](https://github.com/mikavilpas/yazi.nvim) | `,` / `:Yazi` |
 
-### Prebaked LSPs
+### 🔧 Prebaked LSP
 
 > [!Important]
 > Check docs about adding new server : [Servers](docs/ServerSetup.md)
@@ -101,16 +101,16 @@ javascript = "server.Web.ts_ls",
 go         = "server.Web.gopls",
 ```
 
-## Install
+## 📦 Install
 
-### Mirrors
+### 🪞 Mirrors
 
 | Host | Link |
 |------|------|
 | GitHub | https://github.com/syfos/nvim |
 | GitLab | https://gitlab.com/pudep/nvim |
 
-### Clone
+### 📥 Clone
 
 **From GitHub:**
 ```bash
@@ -122,7 +122,7 @@ git clone --depth 1 git@github.com:pudep/nvim.git ~/.config/nvim
 git clone --depth 1 git@gitlab.com:pudep/nvim.git ~/.config/nvim
 ```
 
-## Documentation
+## 📚 Documentation
 
 > 📌 **Note:** [GUIDE.md](docs/GUIDE.md) is meant for new maintainers  and those who will modify the `config`.
 
