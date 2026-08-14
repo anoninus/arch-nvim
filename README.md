@@ -7,8 +7,9 @@
 
 ## About
 
-![IMPORTANT]
-> ⚠️ **Help wanted:** I need people who can test this config on different platforms.
+[!Important]
+> Though the project is matured and updates very soon, I still need your help.
+> Do help test the `config` on different platforms.
 
 This config aims to give you a full IDE-like experience in Neovim, without the bloat.
 
