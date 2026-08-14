@@ -8,8 +8,7 @@ end
 local function is_termux()
   -- TERMUX_VERSION is the reliable signal; fall back to inspecting
   -- $PREFIX in case the var isn't exported by the user's shell.
-  return vim.env.TERMUX_VERSION ~= nil
-    or (vim.env.PREFIX ~= nil and vim.env.PREFIX:match("com%.termux") ~= nil)
+  return vim.env.TERMUX_VERSION ~= nil or (vim.env.PREFIX ~= nil and vim.env.PREFIX:match("com%.termux") ~= nil)
 end
 
 -- ============================
@@ -38,13 +37,69 @@ local function prefix()
   return "/"
 end
 
-local function root()
-  -- vim.fs.root/vim.fs.* already normalize separators per-OS.
-  return vim.fs.root(0, { ".root", ".git" }) or vim.fn.getcwd()
-end
-
 local function config()
   return vim.fn.stdpath("config")
+end
+
+-- ============================
+-- Root markers (user-editable)
+--
+-- Loaded once, at file-load time, from ~/.config/nvim/root_markers.json
+-- (a plain JSON array of marker filenames, e.g.
+-- [".git", ".root", "package.json", "Cargo.toml", "go.mod"]).
+-- Editing that file requires a `:source` or nvim restart to take
+-- effect since we don't watch it.
+--
+-- Deliberately ONE shared list for both launch_root() and
+-- buffer_root() (not separate "wide" vs "narrow" lists) — since
+-- vim.fs.root() stops at the *nearest* matching marker walking
+-- upward, putting subproject markers (package.json, Cargo.toml,
+-- go.mod, pyproject.toml, ...) alongside repo-level ones (.git,
+-- .root) in the same file already gives buffer_root() natural
+-- narrowing inside a monorepo, with zero extra code.
+-- ============================
+local function load_root_markers()
+  local default_markers = { ".git", ".root" }
+  local path = vim.fs.joinpath(vim.fn.stdpath("config"), "root_markers.json")
+  local f = io.open(path, "r")
+  if not f then
+    return default_markers
+  end
+  local content = f:read("*a")
+  f:close()
+  local ok, decoded = pcall(vim.json.decode, content)
+  if not ok or type(decoded) ~= "table" or vim.tbl_isempty(decoded) then
+    vim.notify(
+      "[fzf-files-grep] root_markers.json missing/invalid; falling back to default markers",
+      vim.log.levels.WARN
+    )
+    return default_markers
+  end
+  return decoded
+end
+
+local ROOT_MARKERS = load_root_markers()
+
+-- Root from where nvim was launched (pwd), walking upward for a
+-- marker; falls back to pwd itself if none is found.
+local function launch_root()
+  return vim.fs.root(vim.fn.getcwd(), ROOT_MARKERS) or vim.fn.getcwd()
+end
+
+-- Root relative to the CURRENT BUFFER's file, walking upward for a
+-- marker; falls back to the buffer's own directory if no marker is
+-- found. Returns nil (caller should notify + no-op) if the buffer
+-- isn't backed by a file on disk at all (scratch/terminal/etc).
+local function buffer_root()
+  local bufname = vim.api.nvim_buf_get_name(0)
+  if bufname == "" then
+    return nil
+  end
+  return vim.fs.root(0, ROOT_MARKERS) or vim.fn.fnamemodify(bufname, ":h")
+end
+
+local function notify_no_buffer_root()
+  vim.notify("[fzf-files-grep] current buffer has no file on disk; can't resolve a buffer root", vim.log.levels.WARN)
 end
 
 -- ============================
@@ -89,9 +144,18 @@ local RG_OPTS = '--column --line-number --no-heading --color=always --smart-case
 
 -- ============================
 -- Tool availability guard
+--
+-- Checked once at load time (vim.fn.executable() does a PATH walk)
+-- rather than on every single keypress — small, but it's one less
+-- synchronous filesystem op between "key pressed" and "window open".
 -- ============================
+local TOOL_AVAILABLE = {
+  fd = vim.fn.executable("fd") == 1,
+  rg = vim.fn.executable("rg") == 1,
+}
+
 local function require_executable(name)
-  if vim.fn.executable(name) ~= 1 then
+  if not TOOL_AVAILABLE[name] then
     vim.notify(
       string.format("[fzf-files-grep] '%s' not found on PATH; this picker will not work.", name),
       vim.log.levels.WARN
@@ -104,7 +168,7 @@ end
 -- ============================
 -- files/grep opener with ctrl-r toggle + alt-r dir-picker
 -- ============================
-local open_files, open_grep, pick_dir
+local open_files, open_grep, pick_dir_files, pick_dir_grep
 
 local switching = false
 local function guard(fn)
@@ -125,7 +189,7 @@ local function guard(fn)
   end
 end
 
-open_files = function(cwd, label)
+open_files = function(cwd, label, context)
   if not require_executable("fd") then
     return
   end
@@ -133,20 +197,27 @@ open_files = function(cwd, label)
     cwd = cwd,
     prompt = label,
     cwd_prompt = true,
-    git_icons = true,
+    -- git_icons deliberately off: it makes fzf-lua shell out to `git
+    -- status` and wait on it before painting results. file_icons is
+    -- just a local extension lookup, no subprocess, kept on.
+    git_icons = false,
     file_icons = true,
     fd_opts = FD_FILE_OPTS,
+    winopts = {
+      title = " Files: " .. context .. " ",
+      title_pos = "center",
+    },
     actions = {
       ["default"] = require("fzf-lua").actions.file_edit,
       ["ctrl-r"] = guard(function()
-        open_grep(cwd, label)
+        open_grep(cwd, label, context)
       end),
-      ["alt-r"] = guard(pick_dir),
+      ["alt-r"] = guard(pick_dir_files),
     },
   })
 end
 
-open_grep = function(cwd, label)
+open_grep = function(cwd, label, context)
   if not require_executable("rg") then
     return
   end
@@ -154,15 +225,19 @@ open_grep = function(cwd, label)
     cwd = cwd,
     prompt = label,
     cwd_prompt = true,
-    git_icons = true,
+    git_icons = false,
     file_icons = true,
     rg_opts = RG_OPTS,
+    winopts = {
+      title = " Grep: " .. context .. " ",
+      title_pos = "center",
+    },
     actions = {
       ["default"] = require("fzf-lua").actions.file_edit,
       ["ctrl-r"] = guard(function()
-        open_files(cwd, label)
+        open_files(cwd, label, context)
       end),
-      ["alt-r"] = guard(pick_dir),
+      ["alt-r"] = guard(pick_dir_files),
     },
   })
 end
@@ -172,24 +247,72 @@ end
 -- ============================
 local map = vim.keymap.set
 
-map("n", "fd", function()
-  open_files(vim.fn.getcwd(), "Cwd/")
-end, { desc = "Files: cwd" })
-map("n", "fr", function()
-  open_files(root(), "Root_Dir/")
-end, { desc = "Files: project root" })
+-- ---- Find files ----
+map("n", "fl", function()
+  open_files(launch_root(), "Launch/", "launch pwd/root")
+end, { desc = "Files: launch pwd/root" })
+
+map("n", "fb", function()
+  local dir = buffer_root()
+  if not dir then
+    notify_no_buffer_root()
+    return
+  end
+  open_files(dir, "BufRoot/", "buffer root/dir")
+end, { desc = "Files: buffer root/dir" })
+
 map("n", "fh", function()
-  open_files(home(), "~/")
+  open_files(home(), "~/", "$HOME")
 end, { desc = "Files: $HOME" })
-map("n", "fp", function()
-  open_files(prefix(), "$PREFIX/")
-end, { desc = "Files: $PREFIX" })
+
 map("n", "fc", function()
-  open_files(config(), "Purc/")
-end, { desc = "Files: nvim config" })
+  open_files(config(), "Config/", "nvim config")
+end, { desc = "Files: nvimrc / config" })
+
+map("n", "fo", function()
+  require("fzf-lua").oldfiles({
+    prompt = "Old/",
+    winopts = {
+      title = " Files: oldfiles ",
+      title_pos = "center",
+    },
+  })
+end, { desc = "Files: oldfiles" })
+
+-- fd is mapped below, after pick_dir_files is defined.
+
+-- ---- Grep ----
+map("n", "gl", function()
+  open_grep(launch_root(), "Launch/", "launch pwd/root")
+end, { desc = "Grep: launch pwd/root" })
+
+map("n", "gb", function()
+  local dir = buffer_root()
+  if not dir then
+    notify_no_buffer_root()
+    return
+  end
+  open_grep(dir, "BufRoot/", "buffer root/dir")
+end, { desc = "Grep: buffer root/dir" })
+
+map("n", "gf", function()
+  if not require_executable("rg") then
+    return
+  end
+  require("fzf-lua").lgrep_curbuf({
+    prompt = "Buf/",
+    rg_opts = RG_OPTS,
+    winopts = {
+      title = " Grep: current buffer ",
+      title_pos = "center",
+    },
+  })
+end, { desc = "Grep: current buffer" })
+
+-- gd is mapped below, after pick_dir_grep is defined.
 
 -- ============================
--- Custom dir picker
+-- Custom dir pickers (fd / gd)
 --
 -- Rewritten to avoid shelling out through `sed`/`{ ... ; }` POSIX
 -- pipeline syntax, which silently breaks on Windows shells (cmd.exe,
@@ -200,10 +323,9 @@ end, { desc = "Files: nvim config" })
 -- IMPORTANT: results are streamed to fzf-lua as `fd` produces them
 -- (async `stdout` callback), not collected with `:wait()` first. A
 -- blocking prefetch of the whole $HOME tree is what caused the
--- "UI loads late" delay on `ff` — the fzf window couldn't open
+-- "UI loads late" delay previously — the fzf window couldn't open
 -- until fd finished walking every directory. Streaming lets the
--- window open immediately and fill in as results arrive, matching
--- the original shell-pipe version's responsiveness.
+-- window open immediately and fill in as results arrive.
 -- ============================
 
 -- Display roots: on Termux, both $HOME and $PREFIX are meaningful.
@@ -220,7 +342,10 @@ local function display_roots()
   return roots
 end
 
-pick_dir = function()
+-- Shared async dir-streaming helper: walks `display_roots()` with fd
+-- and feeds fzf-lua as results arrive. `on_select(dir)` is called
+-- with the chosen absolute path when the user picks one.
+local function run_dir_picker(prompt, title, on_select)
   if not require_executable("fd") then
     return
   end
@@ -294,23 +419,38 @@ pick_dir = function()
       end
     end
   end, {
-    prompt = "Dir> ",
+    prompt = prompt,
+    winopts = {
+      title = " " .. title .. " ",
+      title_pos = "center",
+    },
     actions = {
       ["default"] = function(selected)
-        for i, label in ipairs(selected) do
-          local file = label_to_path[label]
-          if file then
-            if i == 1 then
-              vim.cmd("edit " .. vim.fn.fnameescape(file))
-            else
-              vim.cmd("vsplit " .. vim.fn.fnameescape(file))
-            end
-          end
+        local label = selected[1]
+        local dir = label and label_to_path[label]
+        if dir then
+          on_select(dir)
         end
       end,
     },
   })
 end
 
-map("n", "ff", pick_dir, { desc = "Files: pick custom dir ($HOME/$PREFIX)" })
+-- fd: pick a directory from disk, then open a FILES picker scoped
+-- to it (previously this used to `:edit` the directory path itself,
+-- which wasn't actually useful — fixed here).
+pick_dir_files = function()
+  run_dir_picker("Dir> ", "Files: pick dir from disk, find inside", function(dir)
+    open_files(dir, "Sel/", "selected dir")
+  end)
+end
 
+-- gd: pick a directory from disk, then open a GREP picker scoped to it.
+pick_dir_grep = function()
+  run_dir_picker("Grep Dir> ", "Grep: pick dir from disk, grep inside", function(dir)
+    open_grep(dir, "Sel/", "selected dir")
+  end)
+end
+
+map("n", "fd", pick_dir_files, { desc = "Files: pick dir from disk, find inside" })
+map("n", "gd", pick_dir_grep, { desc = "Grep: pick dir from disk, grep inside" })
