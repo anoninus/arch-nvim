@@ -1,5 +1,5 @@
 vim.lsp.config("cssls", {
-  cmd = { "/data/data/com.termux/files/usr/bin/vscode-css-language-server", "--stdio" },
+  cmd = { "vscode-css-language-server", "--stdio" },
   filetypes = { "css", "scss", "less" },
   root_markers = { "package.json", ".git", ".editorconfig" },
 

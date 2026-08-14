@@ -1,5 +1,5 @@
 vim.lsp.config("html", {
-  cmd = { "/data/data/com.termux/files/usr/bin/vscode-html-language-server", "--stdio" },
+  cmd = { "vscode-html-language-server", "--stdio" },
   filetypes = { "html", "templ", "htmldjango", "jinja", "handlebars" },
   root_markers = { "package.json", ".git", ".editorconfig", "index.html" },
 
