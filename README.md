@@ -7,7 +7,7 @@
 
 ## About
 
-[!Important]
+> [!Important]
 > Though the project is matured and updates very soon, I still need your help.
 > Do help test the `config` on different platforms.
 
