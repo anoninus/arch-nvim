@@ -42,7 +42,7 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 | 23 | Autocomplete | [blink.cmp](https://github.com/Saghen/blink.cmp) + [friendly-snippets](https://github.com/rafamadriz/friendly-snippets) + [ultimate-autopair.nvim](https://github.com/altermo/ultimate-autopair.nvim) |
 | 24 | Key hints | [mini.clue](https://github.com/echasnovski/mini.clue) — a which-key style hint for your next keypress |
 | 25 | Nerd Font support | Via [mini.icons](https://github.com/echasnovski/mini.icons) |
-| 26 | Lazygit | [lazygit.nvim](https://github.com/kdheepak/lazygit.nvim), `<C-g>` |
+| 26 | Lazygit | [lazygit.nvim](https://github.com/kdheepak/lazygit.nvim), `<M-g>` |
 | 27 | Move lines/blocks | [mini.move](https://github.com/echasnovski/mini.move) — `<M-Up/Down/Left/Right>` in normal or visual mode |
 | 28 | Default formatting | Linebreak, wrap, and 2-space indent. Change this in `lua/sys/options.lua` |
 | 29 | Surround text | [nvim-surround](https://github.com/kylechui/nvim-surround) — see its docs for usage |
@@ -63,7 +63,7 @@ This config aims to give you a full IDE-like experience in Neovim, without the b
 | [fzf-lua](https://github.com/ibhagwan/fzf-lua) | command / session config |
 | [indent-blankline.nvim](https://github.com/lukas-reineke/indent-blankline.nvim) | with mini.indent |
 | [lazy.nvim](https://github.com/folke/lazy.nvim) | startup |
-| [lazygit.nvim](https://github.com/kdheepak/lazygit.nvim) | `<C-g>` |
+| [lazygit.nvim](https://github.com/kdheepak/lazygit.nvim) | `<M-g>` |
 | [mini.clue](https://github.com/echasnovski/mini.clue) | with mini clues module |
 | [mini.icons](https://github.com/echasnovski/mini.icons) | startup |
 | [mini.indentscope](https://github.com/echasnovski/mini.indentscope) | with mini.indent |
