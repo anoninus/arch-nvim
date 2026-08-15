@@ -63,7 +63,7 @@ _G.PuSessionSnapshot = nil
 --     window sizes/positions) is captured and restored exactly.
 --   - NO "folds" -> fold state isn't reliably restored anyway, so it's
 --     dropped rather than carrying dead weight in the session file.
-vim.o.sessionoptions = "buffers,tabpages,winsize,winpos,localoptions,globals,help"
+vim.o.sessionoptions = "buffers,tabpages,winsize,winpos"
 
 local function ensure_dir()
   if vim.fn.isdirectory(M.session_dir) == 0 then
