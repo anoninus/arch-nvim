@@ -17,6 +17,7 @@ vim.opt.rtp:prepend(lazypath)
 -- =====================
 require("lazy").setup({
   spec = {
+    { import = "theme.tokyonight.install" },
     { import = "plugin.snippets" },
     { import = "plugin.completion" },
     { import = "plugin.formatting" },
