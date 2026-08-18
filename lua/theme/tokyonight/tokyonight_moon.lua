@@ -54,4 +54,14 @@ return {
 
   BlinkCmpSignatureHelp = { bg = "#000000", fg = "#c8d3f5" },
   BlinkCmpSignatureHelpBorder = { fg = "#545c7e", bg = "#000000", bold = true },
+
+  MiniTablineFill = { bg = "#1b1d2b" },
+  MiniTablineTabpagesection = { bg = "#3b4261" },
+  MiniTablineTrunc = { link = "MiniTablineHidden" },
+  MiniTablineHidden = { fg = "#737aa2", bg = "#1e2030" },
+  MiniTablineCurrent = { fg = "#c8d3f5", bg = "#3b4261" },
+  MiniTablineVisible = { fg = "#c8d3f5", bg = "#1e2030" },
+  MiniTablineModifiedHidden = { fg = "#bd9664", bg = "#1e2030" },
+  MiniTablineModifiedCurrent = { fg = "#ffc777", bg = "#3b4261" },
+  MiniTablineModifiedVisible = { fg = "#ffc777", bg = "#1e2030" },
 }
