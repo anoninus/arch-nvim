@@ -2,10 +2,10 @@ git remote remove github
 git remote remove gitlab
 
 # Add origin with github as fetch URL
-git remote add origin git@github.com:pudep/nvim.git
+git remote add origin git@github.com:syfos/nvim.git
 
 # Add gitlab as second push URL
-git remote set-url --add --push origin git@github.com:pudep/nvim.git
+git remote set-url --add --push origin git@github.com:syfos/nvim.git
 git remote set-url --add --push origin git@gitlab.com:pudep/nvim.git
 
 # Fetch and set upstream
