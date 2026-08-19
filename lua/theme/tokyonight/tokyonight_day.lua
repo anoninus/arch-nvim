@@ -1,6 +1,29 @@
 return {
-  Normal = {
-    bg = "#FFFCF2",
-    fg = "#2F3A4A",
-  },
+  MiniTablineFill = { bg = "#b4b5b9" },
+  MiniTablineTabpagesection = { bg = "#2e7de9", fg = "#ffffff", bold = true },
+  MiniTablineTrunc = { link = "MiniTablineHidden" },
+  MiniTablineHidden = { fg = "#1a1b26", bg = "#b4b5b9" },
+  MiniTablineCurrent = { fg = "#ffffff", bg = "#2e7de9" },
+  MiniTablineVisible = { fg = "#ffffff", bg = "#7847bd", bold = true },
+  MiniTablineModifiedHidden = { fg = "#b15c00", bg = "#b4b5b9", bold = true },
+  MiniTablineModifiedCurrent = { fg = "#ffffff", bg = "#b15c00", bold = true },
+  MiniTablineModifiedVisible = { fg = "#ffffff", bg = "#b15c00", bold = true },
+
+  FzfLuaFzfNormal = { fg = "#3760bf", bg = "#e1e2e7" },
+  FzfLuaPreviewNormal = { fg = "#3760bf", bg = "#e1e2e7" },
+
+  FzfLuaFzfBorder = { fg = "#2e7de9", bg = "#e1e2e7" },
+  FzfLuaFzfTitle = { fg = "#ffffff", bg = "#2e7de9", bold = true },
+  FzfLuaFzfCursorLine = { fg = "#ffffff", bg = "#2e7de9", bold = true },
+  FzfLuaFzfPointer = { fg = "#d20065", bold = true },
+  FzfLuaFzfMarker = { fg = "#587539", bold = true },
+  FzfLuaFzfMatch = { fg = "#d20065", bold = true },
+  FzfLuaFzfQuery = { fg = "#3760bf" },
+  FzfLuaFzfPrompt = { fg = "#2e7de9" },
+  FzfLuaFzfInfo = { fg = "#6172b0" },
+  FzfLuaFzfHeader = { fg = "#b15c00" },
+  FzfLuaFzfGutter = { bg = "#e1e2e7" },
+  FzfLuaFzfSpinner = { fg = "#d20065" },
+  FzfLuaFzfSeparator = { fg = "#2e7de9" },
+  FzfLuaFzfScrollbar = { fg = "#2e7de9" },
 }
