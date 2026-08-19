@@ -25,7 +25,9 @@ local function setup_fzf()
     fzf_opts = {
       ["--wrap"] = true,
     },
-    fzf_colors = true,
+    fzf_colors = {
+      true,
+    },
     files = {
       prompt = " ",
       multiprocess = true,
