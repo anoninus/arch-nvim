@@ -36,7 +36,7 @@ local function pick_colorscheme(theme)
   if f then f:write(theme); f:close() end
 end
 
-vim.api.nvim_create_user_command('pick', function(opts)
+vim.api.nvim_create_user_command('Pick', function(opts)
   pick_colorscheme(opts.args)
 end, { nargs = 1, complete = 'color' })
 
