@@ -50,8 +50,8 @@ return {
           FloatTitle  = {bg = "#1e66f5", fg = "#eff1f5"},
           Title  = {bg = "#1e66f5", fg = "#eff1f5"},
           BlinkCmpMenuSelection = {bg = "#B9E1FF"},
-          FzfLuaCursorLine = {bg = "#B9E1FF"}
-
+          FzfLuaCursorLine = {bg = "#B9E1FF"},
+          LeapBackdrop = {link = "Comment"},
         }
       end,
     },
