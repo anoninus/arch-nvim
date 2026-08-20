@@ -41,6 +41,20 @@ return {
         indentscope_color = "",
       },
     },
+
+    highlight_overrides = {
+      latte = function(latte)
+        return {
+          MiniTablineCurrent  = {bg = "#1e66f5", fg = "#eff1f5"},
+          MiniTablineTabpagesection = {bg="#fe640b", fg ="#eff1f5"},
+          FloatTitle  = {bg = "#1e66f5", fg = "#eff1f5"},
+          Title  = {bg = "#1e66f5", fg = "#eff1f5"},
+          BlinkCmpMenuSelection = {bg = "#B9E1FF"},
+          FzfLuaCursorLine = {bg = "#B9E1FF"}
+
+        }
+      end,
+    },
   },
   config = function(_, opts)
     require("catppuccin").setup(opts)
