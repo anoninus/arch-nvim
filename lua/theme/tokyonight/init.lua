@@ -32,7 +32,6 @@ M.default_dark = nil ---@type string?
 M.default_light = nil ---@type string?
 
 local last = { dark = nil, light = nil } ---@type table<string, string?>
-local guard = false -- prevents the OptionSet autocmd from re-triggering itself
 
 --- Apply a registered variant by name: sets background, loads the
 --- colorscheme, then stamps on the variant's own highlight overrides.
@@ -44,10 +43,7 @@ function M.apply_variant(name)
     return
   end
 
-  guard = true
   vim.o.background = v.background
-  guard = false
-
   vim.cmd.colorscheme(v.colorscheme)
 
   if v.overrides then
@@ -63,7 +59,7 @@ function M.apply_variant(name)
   M.current = name
   last[v.background] = name
 
-  vim.g.colors_variant = name -- handy for statusline/lualine components
+  vim.g.colors_variant = name
 end
 
 --- Switch background, reusing whichever variant was last active for that
@@ -113,17 +109,6 @@ function M.setup(opts)
       return vim.tbl_keys(M.variants)
     end,
     desc = "Switch to a specific registered color variant",
-  })
-
-  -- Makes `:set background=light` / `:set background=dark` "just work".
-  vim.api.nvim_create_autocmd("OptionSet", {
-    pattern = "background",
-    callback = function()
-      if guard then
-        return
-      end
-      M.set_background(vim.o.background)
-    end,
   })
 
   local toggle_key = opts.toggle_key
